@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>卒論 赤ペンチェック</title>
+<meta name="description" content="卒業論文のWordファイルを入れると、フォーマットと論文ルールに合っているかを赤ペンで返します。ファイルはどこにも送りません。">
+<link href="vendor/fonts.css" rel="stylesheet">
+<style>
+:root{
+  --paper:#fbf8f1; --sheet:#ffffff; --ink:#2b2622; --sub:#6d655c; --line:#e3dccf;
+  --red:#d2302a; --red-soft:#fbe4e1; --amber:#b86e00; --amber-soft:#fdf0d8; --ok:#2f7d4f; --ok-soft:#e1f1e7;
+  --blue:#2d5f9a; --blue-soft:#e3ecf7; --shadow:0 1px 2px rgba(60,40,20,.08),0 8px 24px rgba(60,40,20,.08);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#1d1a17; --sheet:#fbf8f1; --line:#3a342d; --sub:#b3a99c;
+  }
+  :root:not([data-theme="light"]) body{color:#efe8dc}
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font-family:"Zen Kaku Gothic New",system-ui,sans-serif;line-height:1.7;-webkit-text-size-adjust:100%}
+button{font:inherit;cursor:pointer}
+.wrap{max-width:1000px;margin:0 auto;padding:0 16px}
+header.top{padding:28px 0 8px}
+.brand{display:flex;align-items:center;gap:14px}
+.stamp{width:54px;height:54px;border:3px solid var(--red);border-radius:50%;display:grid;place-items:center;color:var(--red);font-family:"Klee One";font-weight:600;font-size:15px;line-height:1.1;text-align:center;transform:rotate(-8deg);flex:none}
+h1{font-family:"Zen Old Mincho",serif;font-size:clamp(24px,4vw,32px);margin:0;letter-spacing:.04em}
+.lead{color:var(--sub);margin:6px 0 0;font-size:14px}
+.drop{display:block;cursor:pointer;margin:22px 0 10px;border:2px dashed #cbbfae;border-radius:14px;background:rgba(255,255,255,.55);padding:34px 16px;text-align:center;transition:.15s}
+.drop.over{border-color:var(--red);background:var(--red-soft)}
+.drop b{font-size:18px}
+.drop p{margin:6px 0;color:var(--sub);font-size:14px}
+.btn{display:inline-flex;align-items:center;gap:8px;border:0;border-radius:999px;padding:10px 20px;background:var(--red);color:#fff;font-weight:700;font-size:15px;box-shadow:0 2px 0 #9e211c}
+.btn:hover{filter:brightness(1.05)}
+.btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line);box-shadow:none}
+.btn:disabled{opacity:.5;cursor:default}
+.safe{display:inline-flex;gap:6px;align-items:center;font-size:13px;color:var(--ok);background:var(--ok-soft);border-radius:999px;padding:3px 12px;margin-top:10px}
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:16px 0}
+.bar .grow{flex:1}
+.muted{color:var(--sub);font-size:13px}
+.hidden{display:none!important}
+
+/* 一覧（複数ファイル） */
+table.list{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;box-shadow:var(--shadow);font-size:14px;color:var(--ink)}
+table.list th,table.list td{padding:9px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+table.list th{background:#f4efe5;font-weight:700;font-size:13px;white-space:nowrap}
+table.list tr.lrow{cursor:pointer}
+table.list tr.lrow:hover td{background:#fff7f5}
+.pill{display:inline-block;min-width:26px;text-align:center;border-radius:999px;padding:0 8px;font-weight:700;font-size:13px}
+.pill.ng{background:var(--red-soft);color:var(--red)}
+.pill.warn{background:var(--amber-soft);color:var(--amber)}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.listwrap{overflow-x:auto}
+
+/* 赤ペンシート */
+.sheet{--sub:#6d655c;--line:#e3dccf;background:var(--sheet);color:var(--ink);box-shadow:var(--shadow);border-radius:4px;margin:0 auto 28px;width:100%;max-width:880px;padding:34px 38px}
+.pdf-mode .sheet{box-shadow:none;border-radius:0;max-width:none;width:794px;padding:0}
+.s-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;border-bottom:2px solid var(--ink);padding-bottom:10px}
+.s-head h2{font-family:"Zen Old Mincho",serif;margin:0;font-size:22px}
+.s-head .who{font-size:13px;color:var(--sub);text-align:right}
+.s-title{font-family:"Zen Old Mincho",serif;font-size:17px;font-weight:700;margin:12px 0 2px}
+.score{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:16px 0}
+.score div{border-radius:10px;padding:10px 12px;text-align:center}
+.score b{display:block;font-size:26px;line-height:1.2}
+.score .ng{background:var(--red-soft);color:var(--red)}
+.score .warn{background:var(--amber-soft);color:var(--amber)}
+.score .ok{background:var(--ok-soft);color:var(--ok)}
+.sec-h{font-weight:700;font-size:15px;margin:20px 0 8px;display:flex;align-items:center;gap:8px}
+.sec-h::before{content:"";width:6px;height:18px;background:var(--red);border-radius:2px}
+.top3{margin:0;padding:0;list-style:none;display:grid;gap:8px}
+.top3 li{display:grid;grid-template-columns:34px 1fr;gap:10px;align-items:start;border:1.5px solid var(--red);border-radius:10px;padding:10px 12px;background:#fffafa}
+.top3 .n{font-family:"Klee One";font-weight:600;color:#fff;background:var(--red);border-radius:50%;width:30px;height:30px;display:grid;place-items:center;font-size:17px}
+.top3 .m{font-weight:700}
+.top3 .tag{display:inline-block;font-size:11.5px;font-weight:700;color:var(--red);border:1px solid var(--red);border-radius:4px;padding:0 6px;margin-right:8px;vertical-align:1px}
+.top3 .f{font-family:"Klee One";color:var(--red);font-size:15px}
+table.chk{width:100%;border-collapse:collapse;font-size:13.5px}
+table.chk td{border-bottom:1px solid var(--line);padding:6px 8px;vertical-align:top}
+table.chk td.mk{width:34px;text-align:center;font-size:18px;font-weight:700;line-height:1.3}
+table.chk td.lb{width:190px;font-weight:700}
+table.chk td.dt{color:var(--sub)}
+.mk.ok{color:var(--ok)} .mk.warn{color:var(--amber)} .mk.ng{color:var(--red)} .mk.hint{color:var(--blue)} .mk.none{color:#aaa}
+.nums{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:13px;color:var(--sub);margin-top:6px}
+.nums b{color:var(--ink)}
+.sensei{margin-top:18px;border-radius:10px;background:#fff7f4;border:1px dashed var(--red);padding:12px 16px;font-family:"Klee One";color:var(--red);font-size:16px;line-height:1.8}
+.sensei .sig{text-align:right;font-size:14px}
+.pagebreak{height:0;border-top:1px dashed #d8cfc2;margin:30px -38px}
+.pdf-mode .pagebreak{display:none}
+
+/* 本文の赤ペン */
+.pp-note{font-size:12.5px;color:var(--sub);margin:4px 0 12px}
+.row{display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:18px;padding:3px 0;break-inside:avoid}
+.txt{font-family:"Zen Old Mincho",serif;font-size:14px;line-height:1.95;white-space:pre-wrap;word-break:break-all;padding-left:8px;border-left:3px solid transparent}
+.txt.has{border-left-color:rgba(210,48,42,.55)}
+.txt.hasw{border-left-color:rgba(184,110,0,.5)}
+.txt.r-title,.txt.r-subtitle{text-align:center;font-weight:700;font-size:17px}
+.txt.r-name{text-align:center;font-size:13px}
+.txt.r-abstract{font-size:13px}
+.txt.r-keyword{font-weight:700;font-size:13px}
+.txt.r-heading,.txt.r-refhead{font-weight:700;font-size:15px;margin-top:8px}
+.txt.r-refhead{text-align:center}
+.txt.r-subheading{font-weight:600;font-size:14px}
+.txt.r-ref{font-size:13px;padding-left:2.2em;text-indent:-1.4em}
+.txt.r-caption,.txt.r-source{font-size:12.5px;color:#444}
+.txt.r-empty{min-height:10px;line-height:1}
+.txt .fig{display:inline-block;border:1px solid #bbb;background:repeating-linear-gradient(45deg,#f6f6f6 0 6px,#eee 6px 12px);color:#777;font-family:"Zen Kaku Gothic New";font-size:12px;padding:6px 14px;margin:2px 0}
+.tbl{font-family:"Zen Kaku Gothic New";font-size:12px;border-collapse:collapse;margin:4px 0}
+.tbl td{border:1px solid #bbb;padding:2px 6px}
+.mark{text-decoration:underline wavy var(--red);text-decoration-thickness:1.5px;text-underline-offset:4px;background:rgba(210,48,42,.07)}
+.mark.w{text-decoration-color:var(--amber);background:rgba(184,110,0,.08)}
+.mark.h{text-decoration-color:var(--blue);background:rgba(45,95,154,.07)}
+.no{font-family:"Klee One";font-weight:600;color:var(--red);font-size:12px;vertical-align:super;line-height:0;margin:0 1px;white-space:nowrap;text-indent:0}
+.no.w{color:var(--amber)} .no.h{color:var(--blue)}
+.notes{display:flex;flex-direction:column;gap:6px;padding-top:4px}
+.note{font-family:"Klee One";font-size:13.5px;line-height:1.55;color:var(--red);border-left:2px solid var(--red);padding:1px 0 1px 8px}
+.note.warn{color:#9a5a00;border-color:var(--amber)}
+.note.hint{color:var(--blue);border-color:var(--blue)}
+.note .fx{display:block;font-weight:600}
+.note .fx::before{content:"→ "}
+.note .nn{font-weight:600;margin-right:3px}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12.5px;margin:8px 0 14px;color:var(--sub)}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px}
+.foot{font-size:12px;color:var(--sub);margin-top:18px;border-top:1px solid var(--line);padding-top:8px}
+
+details.rules{background:#fff;border-radius:12px;box-shadow:var(--shadow);padding:10px 18px;margin:18px 0 40px;color:var(--ink)}
+details.rules summary{cursor:pointer;font-weight:700}
+details.rules table{border-collapse:collapse;font-size:13.5px;width:100%;margin:8px 0}
+details.rules td{border-bottom:1px solid var(--line);padding:5px 8px;vertical-align:top}
+details.rules td:first-child{white-space:nowrap;font-weight:700;width:9em}
+.progress{height:6px;background:#eadfcd;border-radius:6px;overflow:hidden;flex:1;min-width:120px}
+.progress i{display:block;height:100%;width:0;background:var(--red);transition:width .2s}
+#stage{position:fixed;left:-20000px;top:0;width:794px;background:#fff}
+#stage .pdf-mode,#stage .sheet{background:#fff}
+.err{background:var(--red-soft);color:var(--red);border-radius:10px;padding:10px 14px;margin:10px 0}
+
+@media (max-width:720px){
+  .sheet{padding:20px 16px}
+  .row{grid-template-columns:1fr;gap:4px}
+  .notes{padding-left:10px}
+  table.chk td.lb{width:auto}
+  .score b{font-size:20px}
+  .pagebreak{margin:24px -16px}
+}
+/* PDF用（画面の幅にかかわらず2列） */
+.pdf-mode .row{grid-template-columns:minmax(0,1fr) 240px!important;gap:16px!important}
+.pdf-mode .notes{padding-left:0!important}
+.pdf-mode .score b{font-size:26px!important}
+.pdf-mode table.chk td.lb{width:190px!important}
+@media print{
+  body{background:#fff}
+  header.top,.drop,.bar,details.rules,#listView{display:none!important}
+  .sheet{box-shadow:none;max-width:none;padding:0}
+  .pagebreak{break-after:page;border:0;margin:0}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="stamp">赤<br>ペン</div>
+      <div>
+        <h1>卒論 赤ペンチェック</h1>
+        <p class="lead">卒業論文のWordファイルを入れると、フォーマット（2026）と論文ルールに合っているかを確かめて、赤ペンで返します。</p>
+      </div>
+    </div>
+  </header>
+
+  <label class="drop" id="drop">
+    <input type="file" id="file" accept=".docx" multiple hidden>
+    <b>Wordファイル（.docx）をここに入れる</b>
+    <p>クリックして選ぶこともできます。先生は、クラス全員分をまとめて入れられます。</p>
+    <span class="safe">🔒 ファイルはこのパソコンの中だけで読みます。どこにも送りません。</span>
+  </label>
+  <div id="msg"></div>
+
+  <section id="listView" class="hidden">
+    <div class="bar">
+      <b id="listCount"></b><span class="grow"></span>
+      <button class="btn ghost" id="csvBtn">一覧を表（CSV）で保存</button>
+      <button class="btn" id="zipBtn">全員分の赤ペンPDFをまとめて保存</button>
+    </div>
+    <div class="bar hidden" id="progBar"><span class="muted" id="progTxt"></span><div class="progress"><i id="prog"></i></div></div>
+    <div class="listwrap"><table class="list" id="list"></table></div>
+    <p class="muted">行をクリックすると、その人の赤ペンが下に出ます。</p>
+  </section>
+
+  <section id="oneView" class="hidden">
+    <div class="bar">
+      <button class="btn ghost hidden" id="backBtn">↑ 一覧へ</button>
+      <span class="grow"></span>
+      <button class="btn" id="pdfBtn">赤ペンをPDFで保存</button>
+    </div>
+    <div id="report"></div>
+  </section>
+
+  <details class="rules" id="rules">
+    <summary>何を確かめているか（基準の一覧）</summary>
+    <div id="rulesBody"></div>
+  </details>
+</div>
+<div id="stage"></div>
+
+<script src="vendor/jszip.min.js"></script>
+<script src="vendor/html2canvas.min.js"></script>
+<script src="vendor/jspdf.umd.min.js"></script>
+<script src="engine.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>
